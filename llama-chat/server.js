@@ -3,15 +3,19 @@ const fs = require("fs");
 const path = require("path");
 
 const PORT = Number(process.env.PORT) || 3000;
-const BASE_URL = (process.env.LLAMA_BASE_URL || "https://api.llama.com/v1").replace(/\/+$/, "");
-const API_KEY = process.env.LLAMA_API_KEY || "";
-const FALLBACK_MODEL = "Llama-4-Maverick-17B-128E-Instruct-FP8";
-let model = process.env.LLAMA_MODEL || FALLBACK_MODEL;
+const BASE_URL = (process.env.OLLAMA_BASE_URL || process.env.LLAMA_BASE_URL || "https://ollama.com/v1").replace(/\/+$/, "");
+const API_KEY = process.env.OLLAMA_API_KEY || process.env.LLAMA_API_KEY || "";
+const MODEL_FROM_ENV = process.env.OLLAMA_MODEL || process.env.LLAMA_MODEL;
+const FALLBACK_MODEL = "gpt-oss:20b";
+let model = MODEL_FROM_ENV || FALLBACK_MODEL;
 
 const indexHtml = fs.readFileSync(path.join(__dirname, "index.html"));
 
+// Local Ollama needs no key, so the header is only sent when one is configured.
 function authHeaders() {
-  return { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" };
+  const headers = { "Content-Type": "application/json" };
+  if (API_KEY) headers.Authorization = `Bearer ${API_KEY}`;
+  return headers;
 }
 
 function errorMessage(bodyText) {
@@ -27,7 +31,7 @@ function errorMessage(bodyText) {
 }
 
 async function pickModel() {
-  if (process.env.LLAMA_MODEL || !API_KEY) return;
+  if (MODEL_FROM_ENV) return;
   try {
     const res = await fetch(`${BASE_URL}/models`, { headers: authHeaders() });
     if (!res.ok) {
@@ -55,9 +59,6 @@ async function handleChat(req, res) {
     messages = JSON.parse(raw).messages;
   } catch {
     return sendJson(res, 400, { error: { status: 400, message: "Invalid JSON request body" } });
-  }
-  if (!API_KEY) {
-    return sendJson(res, 500, { error: { status: 500, message: "LLAMA_API_KEY is not set on the server" } });
   }
 
   let upstream;
@@ -100,6 +101,6 @@ const server = http.createServer((req, res) => {
 
 pickModel().then(() => {
   server.listen(PORT, () => {
-    console.log(`Llama chat on http://localhost:${PORT} (base ${BASE_URL}, model ${model})`);
+    console.log(`Chat on http://localhost:${PORT} (base ${BASE_URL}, model ${model}, key ${API_KEY ? "set" : "not set"})`);
   });
 });

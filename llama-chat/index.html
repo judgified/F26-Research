@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Llama API test chat</title>
+<title>Chat API test</title>
 <style>
   body { font-family: monospace; background: #fff; color: #000; max-width: 720px; margin: 20px auto; padding: 0 10px; }
   #meta { margin-bottom: 10px; }
@@ -16,7 +16,7 @@
 </style>
 </head>
 <body>
-<h1>Llama API test chat</h1>
+<h1>Chat API test</h1>
 <div id="meta">Loading config...</div>
 <div id="messages"></div>
 <form id="form">
@@ -47,7 +47,7 @@ function addMessage(label, text, isError) {
   return body;
 }
 
-// Handles both the native Llama API stream shape and the OpenAI-compatible one.
+// Handles the native Llama API stream shape and the OpenAI-compatible one (Ollama).
 function deltaText(data) {
   if (data.event && data.event.delta) return data.event.delta.text || "";
   if (data.choices && data.choices[0] && data.choices[0].delta) return data.choices[0].delta.content || "";
@@ -77,7 +77,7 @@ form.addEventListener("submit", async (e) => {
       return;
     }
 
-    const out = addMessage("Llama", "");
+    const out = addMessage("Assistant", "");
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
@@ -92,11 +92,15 @@ form.addEventListener("submit", async (e) => {
         if (!line.startsWith("data:")) continue;
         const payload = line.slice(5).trim();
         if (!payload || payload === "[DONE]") continue;
-        try {
-          reply += deltaText(JSON.parse(payload));
-          out.textContent = reply;
-          messagesEl.scrollTop = messagesEl.scrollHeight;
-        } catch {}
+        let data;
+        try { data = JSON.parse(payload); } catch { continue; }
+        if (data.error) {
+          addMessage("Error", `stream: ${data.error.message || JSON.stringify(data.error)}`, true);
+          continue;
+        }
+        reply += deltaText(data);
+        out.textContent = reply;
+        messagesEl.scrollTop = messagesEl.scrollHeight;
       }
     }
     history.push({ role: "assistant", content: reply });
