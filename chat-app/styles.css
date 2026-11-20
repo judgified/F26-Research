@@ -1,0 +1,621 @@
+/* ==========================================================================
+   Design tokens. Later sections (visual design, theming) should change
+   these values rather than the rules below.
+   ========================================================================== */
+:root {
+  /* Colors */
+  --color-bg: #ffffff;
+  --color-surface: #f6f6f7;          /* sidebar, code blocks */
+  --color-surface-hover: #ebebed;
+  --color-surface-active: #e1e1e5;
+  --color-border: #e2e2e6;
+  --color-text: #1b1b1f;
+  --color-text-muted: #6b6b75;
+  --color-accent: #2f5bea;
+  --color-accent-text: #ffffff;
+  --color-user-bubble: #e9eefc;
+  --color-danger: #c62828;
+  --color-scrim: rgb(0 0 0 / 0.4);
+  --color-focus: #2f5bea;
+
+  /* Typography */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-size-base: 1rem;
+  --font-size-small: 0.8125rem;
+  --font-size-code: 0.875rem;
+  --line-height: 1.5;
+
+  /* Spacing and shape */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+
+  /* Layout */
+  --sidebar-width: 272px;
+  --drawer-width: min(85vw, 320px);
+  --topbar-height: 3.25rem;
+  --content-max-width: 48rem;         /* reading width of the message column */
+  --composer-max-height: 12rem;       /* textarea stops growing here, then scrolls */
+  --icon-button-size: 2.25rem;
+  --action-button-size: 1.875rem;     /* copy / edit / regenerate / switcher */
+
+  /* Motion and stacking */
+  --transition-fast: 150ms ease;
+  --transition-panel: 220ms ease;
+  --z-jump: 10;
+  --z-scrim: 20;
+  --z-drawer: 30;
+
+  /* The narrow breakpoint is 768px. CSS variables can't be used in media
+     queries, so it is repeated below and in app.js (NARROW_QUERY). */
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height);
+  color: var(--color-text);
+  background: var(--color-bg);
+  overflow: hidden; /* only the message list scrolls */
+}
+
+button, input, textarea { font: inherit; color: inherit; }
+
+svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ==========================================================================
+   App shell: sidebar column + main column
+   ========================================================================== */
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh; /* tracks the visible area when mobile browser bars show/hide */
+  transition: grid-template-columns var(--transition-panel);
+}
+
+.app[data-sidebar="closed"] {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
+/* ==========================================================================
+   Sidebar
+   ========================================================================== */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  overflow: hidden;
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+}
+
+.app[data-sidebar="closed"] .sidebar {
+  padding-inline: 0;
+  border-right: 0;
+}
+
+.sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--icon-button-size);
+}
+
+.sidebar__title {
+  font-weight: 600;
+  padding-left: var(--space-2);
+  white-space: nowrap;
+}
+
+.sidebar__new { width: 100%; }
+
+.sidebar__search input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+}
+
+.sidebar__history {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin-inline: calc(-1 * var(--space-1));
+  padding-inline: var(--space-1);
+}
+
+.chat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* One history row: select button + rename/delete actions */
+.chat-item {
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+}
+
+.chat-item:hover,
+.chat-item:focus-within { background: var(--color-surface-hover); }
+.chat-item:has([aria-current="page"]) { background: var(--color-surface-active); }
+
+.chat-list__item {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.chat-list__item[aria-current="page"] { font-weight: 500; }
+
+.chat-item__actions {
+  display: flex;
+  padding-right: var(--space-1);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+/* Actions appear on hover/focus with a mouse; always visible on touch. */
+.chat-item:hover .chat-item__actions,
+.chat-item:focus-within .chat-item__actions,
+.chat-item:has([aria-current="page"]) .chat-item__actions { opacity: 1; }
+
+@media (hover: none) {
+  .chat-item__actions { opacity: 1; }
+}
+
+.chat-item__rename {
+  flex: 1;
+  min-width: 0;
+  margin: 2px;
+  padding: calc(var(--space-2) - 2px) var(--space-3);
+  border: 1px solid var(--color-focus);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+}
+
+.chat-list__empty {
+  margin: var(--space-2) var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.sidebar__footer {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-3);
+}
+
+.sidebar__footer .button { width: 100%; justify-content: flex-start; }
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.button--primary { background: var(--color-bg); border-color: var(--color-border); }
+.button--primary:hover, .button--ghost:hover { background: var(--color-surface-hover); }
+.button--accent { background: var(--color-accent); color: var(--color-accent-text); }
+.button--accent:hover { filter: brightness(1.1); }
+.button--small { padding: var(--space-1) var(--space-3); font-size: var(--font-size-small); }
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: var(--icon-button-size);
+  height: var(--icon-button-size);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.icon-button:hover { background: var(--color-surface-hover); }
+
+/* Shared small action button: message actions, code copy, chat rename/delete.
+   One class so these look and behave the same everywhere. */
+.action-button {
+  display: inline-grid;
+  place-items: center;
+  width: var(--action-button-size);
+  height: var(--action-button-size);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.action-button svg { width: 1rem; height: 1rem; }
+.action-button:hover:not(:disabled) { background: var(--color-surface-active); color: var(--color-text); }
+.action-button:disabled { opacity: 0.35; cursor: default; }
+.action-button[data-done] { color: var(--color-accent); }
+.action-button--danger:hover:not(:disabled) { color: var(--color-danger); }
+
+/* ==========================================================================
+   Main column: top bar, scrollable messages, composer pinned to the bottom
+   ========================================================================== */
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--topbar-height);
+  padding-inline: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.topbar__title {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The open-sidebar button is only needed while the sidebar is hidden. */
+.app[data-sidebar="open"] #sidebar-toggle { display: none; }
+
+.messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.messages__inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4);
+}
+
+.messages__empty {
+  margin: 20vh 0 0;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+/* ==========================================================================
+   Messages
+   ========================================================================== */
+.message {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.message__body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.message--user { align-self: flex-end; align-items: flex-end; max-width: 85%; }
+.message--user .message__body {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-user-bubble);
+}
+
+.message--assistant { align-self: stretch; }
+
+/* Streaming caret */
+.message[data-streaming] .message__body::after {
+  content: "▍";
+  margin-left: 1px;
+  color: var(--color-text-muted);
+  animation: blink 1s steps(1) infinite;
+}
+
+@keyframes blink { 50% { opacity: 0; } }
+
+.message__note {
+  margin: 0;
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
+.message-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: var(--action-button-size);
+}
+
+/* Version switcher: ‹ 1/2 › */
+.switcher {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.switcher__label { min-width: 2.5em; text-align: center; }
+
+/* Inline editor that replaces a user message while editing */
+.message-edit {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-focus);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+}
+
+.message-edit textarea {
+  width: 100%;
+  max-height: var(--composer-max-height);
+  padding: var(--space-2);
+  border: 0;
+  outline: 0;
+  resize: none;
+  background: transparent;
+}
+
+.message-edit__buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* Fenced code blocks (copy button only; highlighting is a later section) */
+.code-block {
+  margin: var(--space-2) 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow: hidden;
+  white-space: normal;
+}
+
+.code-block__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-1) 0 var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
+.code-block pre {
+  margin: 0;
+  padding: var(--space-3);
+  overflow-x: auto; /* long lines scroll inside the block, not the page */
+  font-family: var(--font-mono);
+  font-size: var(--font-size-code);
+  white-space: pre;
+}
+
+/* Follow-up suggestion chips */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.chip {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  font-size: var(--font-size-small);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.chip:hover { background: var(--color-surface-hover); }
+
+/* ==========================================================================
+   Composer
+   ========================================================================== */
+.composer {
+  position: relative;
+  flex-shrink: 0;
+  padding: 0 var(--space-4) calc(var(--space-2) + env(safe-area-inset-bottom));
+}
+
+.composer__inner {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+}
+
+.composer__inner:focus-within { border-color: var(--color-focus); }
+
+.composer textarea {
+  flex: 1;
+  min-width: 0;
+  max-height: var(--composer-max-height);
+  padding: var(--space-2);
+  border: 0;
+  outline: 0;
+  resize: none;
+  background: transparent;
+  overflow-y: hidden; /* app.js switches to auto once max height is reached */
+}
+
+.icon-button--send {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  border-radius: 50%;
+}
+
+.icon-button--send:hover { background: var(--color-accent); filter: brightness(1.1); }
+.icon-button--send:disabled { opacity: 0.4; cursor: default; filter: none; }
+.icon-button--send[hidden] { display: none; }
+
+.composer__hint {
+  max-width: var(--content-max-width);
+  margin: var(--space-1) auto 0;
+  text-align: center;
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
+/* Floats just above the composer while the user is scrolled away from the end */
+.jump-latest {
+  position: absolute;
+  bottom: calc(100% + var(--space-3));
+  left: 50%;
+  z-index: var(--z-jump);
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.12);
+  font-size: var(--font-size-small);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.jump-latest svg { width: 1rem; height: 1rem; }
+.jump-latest[hidden] { display: none; }
+
+.scrim { display: none; }
+
+/* ==========================================================================
+   Narrow screens: sidebar becomes an off-canvas drawer over the content
+   ========================================================================== */
+@media (max-width: 768px) {
+  .app,
+  .app[data-sidebar="closed"] { grid-template-columns: minmax(0, 1fr); }
+
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: var(--z-drawer);
+    width: var(--drawer-width);
+    padding: var(--space-3);
+    box-shadow: 0 0 24px rgb(0 0 0 / 0.2);
+    transform: translateX(0);
+    /* Visible immediately on open (so focus can move in); hidden only
+       after the slide-out finishes on close. */
+    transition: transform var(--transition-panel), visibility 0s;
+  }
+
+  .app[data-sidebar="closed"] .sidebar {
+    padding: var(--space-3);
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform var(--transition-panel), visibility 0s var(--transition-panel);
+  }
+
+  .scrim:not([hidden]) {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-scrim);
+    background: var(--color-scrim);
+  }
+
+  .app[data-sidebar="open"] #sidebar-toggle { display: inline-grid; }
+
+  .messages__inner { padding-inline: var(--space-3); }
+  .composer { padding-inline: var(--space-2); }
+  .composer__hint { display: none; } /* touch keyboards have no Shift+Enter */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app, .sidebar { transition: none; }
+  .message[data-streaming] .message__body::after { animation: none; }
+}

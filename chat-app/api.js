@@ -99,10 +99,13 @@ export class ModelError extends Error {
  *        Called for each new piece of text. Non-streamed replies call it once
  *        with the whole text.
  * @returns {Promise<{text: string, aborted: boolean, streamed: boolean,
- *                    finishReason: string|null, sources: object|null}>}
+ *                    finishReason: string|null, sources: object|null,
+ *                    suggestions: any[]|null}>}
  *        On abort the promise resolves with `aborted: true` and the partial
  *        text received so far, without rejecting. `sources` contains any
  *        citation fields the API returned, unmodified, or null.
+ *        `suggestions` is the response's top-level `suggestions` field
+ *        (follow-up prompts) if the API sent one, unmodified, or null.
  * @throws {ModelError}
  */
 export async function sendToModel(messages, { signal, onToken } = {}) {
@@ -120,7 +123,7 @@ export async function sendToModel(messages, { signal, onToken } = {}) {
  * ========================================================================== */
 
 async function realSend(messages, signal, emit) {
-  const result = { text: "", aborted: false, streamed: false, finishReason: null, sources: null };
+  const result = { text: "", aborted: false, streamed: false, finishReason: null, sources: null, suggestions: null };
   if (signal?.aborted) return { ...result, aborted: true };
 
   // One controller for both user aborts and the inactivity timeout.
@@ -168,6 +171,7 @@ async function realSend(messages, signal, emit) {
       result.text = typeof choice?.message?.content === "string" ? choice.message.content : "";
       result.finishReason = choice?.finish_reason ?? null;
       result.sources = collectSources(data, choice?.message?.annotations);
+      result.suggestions = data?.suggestions ?? null;
       if (result.text) emit(result.text, result.text);
     }
 
@@ -236,6 +240,7 @@ async function readStream(body, result, emit, onActivity) {
     if (Array.isArray(choice?.delta?.annotations)) annotations.push(...choice.delta.annotations);
     if (choice?.finish_reason) result.finishReason = choice.finish_reason;
     topLevel = { ...topLevel, ...pickSourceFields(chunk) };
+    if (chunk.suggestions != null) result.suggestions = chunk.suggestions;
     return false;
   };
 
@@ -280,14 +285,22 @@ function collectSources(topLevel, annotations) {
  *  MOCK MODE: fake streamed text, no network                                 *
  * ========================================================================== */
 
+let mockCount = 0; // numbers mock replies so regenerated versions differ
+
 async function mockSend(messages, signal, emit) {
-  const result = { text: "", aborted: false, streamed: true, finishReason: null, sources: null };
+  const result = { text: "", aborted: false, streamed: true, finishReason: null, sources: null, suggestions: null };
   const last = [...messages].reverse().find((m) => m.role === "user");
   const prompt = typeof last?.content === "string" ? last.content : "";
+  const n = ++mockCount;
   const reply =
-    `This is a mock reply (mock mode is on). You said: "${prompt.slice(0, 80)}". ` +
+    `Mock reply #${n} (mock mode is on). You said: "${prompt.slice(0, 80)}". ` +
+    `This conversation branch has ${messages.length} message(s) so far.\n\n` +
     "Text arrives in small pieces to simulate streaming, so you can test the " +
-    "interface without calling a real model.";
+    "interface without calling a real model. Here is a code block to try the copy button:\n\n" +
+    "```js\n" +
+    `function mockReply() {\n  return ${n};\n}\n` +
+    "```\n\n" +
+    "That's the end of this mock reply.";
 
   const delay = (ms) => new Promise((resolve) => {
     const t = setTimeout(resolve, ms);
@@ -308,6 +321,7 @@ async function mockSend(messages, signal, emit) {
     emit(token, result.text);
   }
   result.finishReason = "stop";
+  result.suggestions = ["Tell me more", "Show another example"];
   return result;
 }
 

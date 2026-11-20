@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Chat</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <div class="app" id="app" data-sidebar="open">
+
+    <!-- Sidebar: column on wide screens, off-canvas drawer on narrow ones -->
+    <aside class="sidebar" id="sidebar" aria-label="Chats">
+      <div class="sidebar__header">
+        <span class="sidebar__title">Chats</span>
+        <button type="button" class="icon-button" id="sidebar-close" aria-label="Close sidebar"
+                aria-controls="sidebar" title="Close sidebar">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+      </div>
+
+      <button type="button" class="button button--primary sidebar__new" id="new-chat">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        New chat
+      </button>
+
+      <div class="sidebar__search">
+        <label class="visually-hidden" for="chat-search">Search chats</label>
+        <input type="search" id="chat-search" placeholder="Search chats" autocomplete="off">
+      </div>
+
+      <nav class="sidebar__history" aria-label="Chat history">
+        <ul class="chat-list" id="chat-list"></ul>
+        <p class="chat-list__empty" id="chat-list-empty" hidden>No chats found</p>
+      </nav>
+
+      <div class="sidebar__footer">
+        <button type="button" class="button button--ghost" id="open-settings">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>
+          Settings
+        </button>
+      </div>
+    </aside>
+
+    <!-- Click-to-close backdrop behind the drawer (narrow screens only) -->
+    <div class="scrim" id="scrim" hidden></div>
+
+    <main class="main">
+      <header class="topbar">
+        <button type="button" class="icon-button" id="sidebar-toggle" aria-label="Open sidebar"
+                aria-controls="sidebar" aria-expanded="true" title="Toggle sidebar">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <h1 class="topbar__title" id="chat-title">New chat</h1>
+      </header>
+
+      <section class="messages" id="messages" role="log" aria-label="Messages" aria-live="polite">
+        <div class="messages__inner" id="messages-inner">
+          <p class="messages__empty" id="messages-empty">Send a message to start the conversation.</p>
+        </div>
+      </section>
+
+      <form class="composer" id="composer">
+        <button type="button" class="jump-latest" id="jump-latest" hidden>
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+          Jump to latest
+        </button>
+        <div class="composer__inner">
+          <label class="visually-hidden" for="prompt">Message</label>
+          <textarea id="prompt" rows="1" placeholder="Message" enterkeyhint="send"
+                    aria-describedby="prompt-hint"></textarea>
+          <button type="submit" class="icon-button icon-button--send" id="send" aria-label="Send message" title="Send">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+          <button type="button" class="icon-button icon-button--send" id="stop" aria-label="Stop generating" title="Stop" hidden>
+            <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor" stroke="none"/></svg>
+          </button>
+        </div>
+        <p class="composer__hint" id="prompt-hint">Enter to send, Shift+Enter for a new line</p>
+      </form>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,6 +1,23 @@
-# chat-app: model integration
+# chat-app
 
-Single-page AI chat app (HTML, CSS, vanilla JS, no build step). This folder currently contains only the model layer, `api.js`. The UI is not built yet.
+Single-page AI chat app (HTML, CSS, vanilla JS, no build step). It is built section by section. So far it has:
+
+- **Layout:** `index.html`, `styles.css` and `app.js`. Design values live in CSS variables at the top of `styles.css`.
+- **Conversation flow:** in `app.js`.
+  - Chats are saved in `localStorage` under the key `chat-app:v1`. Each chat can be renamed, deleted (after a confirm) and searched; search matches titles and message text.
+  - Editing a user message or regenerating the last reply adds a new branch. A ‹ 1/2 › switcher moves between versions, so the original stays reachable.
+  - Stop keeps the partial answer. Every response and every fenced code block has a copy button.
+  - While a reply streams, the view follows it unless you scroll up. A "Jump to latest" button brings you back.
+  - Suggestion chips appear only when the API returns them.
+- **Model integration:** `api.js`.
+
+## Running it
+
+ES modules don't load from `file://`, so serve the folder over HTTP and open the page:
+
+```sh
+cd chat-app && python3 -m http.server 8000   # then open http://localhost:8000
+```
 
 `api.js` is an ES module with no dependencies. Load it with `<script type="module">` and `import { sendToModel } from "./api.js"`.
 
@@ -35,8 +52,9 @@ const result = await sendToModel(messages, { signal, onToken });
 - **`messages`** is an array of `{ role, content }` objects in OpenAI format. They are sent unchanged.
 - **`signal`** (optional) is an `AbortSignal`. When the request is aborted, the call **resolves** (it does not reject) with `aborted: true` and the partial text received so far.
 - **`onToken(token, fullText)`** (optional) is called for each new piece of text. A non-streamed reply calls it once with the whole text.
-- **The return value** has this shape: `{ text, aborted, streamed, finishReason, sources }`.
+- **The return value** has this shape: `{ text, aborted, streamed, finishReason, sources, suggestions }`.
   - `sources` contains any citation fields the API returned (`citations`, `search_results`, `sources`, and `annotations`), passed through untouched, or `null` if there were none.
+  - `suggestions` is the response's top-level `suggestions` field (follow-up prompts), passed through untouched, or `null`. The UI shows its string items as chips. Mock mode returns two.
 - **Streaming:** the request asks for `stream: true`. If the server responds with JSON instead of Server-Sent Events, the response is read as a normal reply. Set `STREAM: false` to never request streaming.
 - **Errors:** the function throws `ModelError` with these fields: `code`, `status`, `retryAfter`, and `partialText`. The possible values of `code` are:
 
